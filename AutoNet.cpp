@@ -13,15 +13,17 @@
 #include <wlanapi.h>
 #include <objbase.h>
 #include <wtypes.h>
+#include <io.h>
 
 #include <stdio.h>
 #include <stdlib.h>
+
 
 // Need to link with Wlanapi.lib and Ole32.lib
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "wlanapi.lib")
 #pragma comment(lib, "ole32.lib")
-#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )
+//#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )
 
 using namespace std;
 
@@ -30,6 +32,87 @@ using namespace std;
 #define GET_AVAILABLE_NETWORKLIST_FAILED -2
 #define DONT_CONNECT_TARGET_WIFI -3
 #define SLEEP_TIME 300000
+
+#define INI_PATH ".\\login.ini"
+
+string request(
+    "POST /eportal/InterFace.do?method=login HTTP/1.1\r\n"
+    "Host: 172.21.2.10:8080\r\n"
+    "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:107.0) Gecko/20100101 Firefox/107.0\r\n"
+    "Accept: */*\r\n"
+    "Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2\r\n"
+    "Accept-Encoding: gzip, deflate\r\n"
+    "Content-Type: application/x-www-form-urlencoded; charset=UTF-8\r\n"
+    "Content-Length: 197\r\n"
+    "Origin: http://172.21.2.10:8080\r\n"
+    "Connection: close\r\n"
+    "Referer: http://172.21.2.10:8080/eportal/index.jsp?nasip=fbba2526398e9984bd6f73050578e0e2\r\n"
+    "Cookie: EPORTAL_USER_GROUP=2020%E7%BA%A7%E5%AD%A6%E7%94%9F; EPORTAL_COOKIE_DOMAIN=false; EPORTAL_COOKIE_OPERATORPWD=; EPORTAL_COOKIE_USERNAME=; EPORTAL_COOKIE_PASSWORD=; EPORTAL_COOKIE_SERVER=; EPORTAL_COOKIE_SERVER_NAME=; EPORTAL_AUTO_LAND=; JSESSIONID=\r\n"
+    "\r\n"
+);
+
+void initRequest() {
+
+    if (_access(INI_PATH, 0) == -1) {
+        WritePrivateProfileStringA(
+            "info",
+            "userId",
+            "",
+            INI_PATH
+        );
+        WritePrivateProfileStringA(
+            "info",
+            "password",
+            "",
+            INI_PATH
+        );
+        WritePrivateProfileStringA(
+            "info",
+            "service",
+            "",
+            INI_PATH
+        );
+        ofstream ini;
+        ini.open(INI_PATH, ios::app);
+        ini << "\r\n\r\n# service\r\n";
+        ini << "# 校园网：%25E6%25A0%25A1%25E5%259B%25AD%25E7%25BD%2591\r\n";
+        ini << "# 移动：%25E7%25A7%25BB%25E5%258A%25A8\r\n";
+        ini << "# 电信：%25E7%2594%25B5%25E4%25BF%25A1\r\n";
+        ini << "# 联通：%25E8%2581%2594%25E9%2580%259A\r\n";
+        ini.close();
+        MessageBoxA(
+            NULL,
+            "请在login.ini中输入相关信息后再次运行程序",
+            "提示",
+            MB_OK
+        );
+        exit(-1);
+    }
+
+    char userId[20];
+    char password[20];
+    char service[50];
+    GetPrivateProfileStringA("info", "userId", "", userId, 20, INI_PATH);
+    GetPrivateProfileStringA("info", "password", "", password, 20, INI_PATH);
+    GetPrivateProfileStringA("info", "service", "", service, 50, INI_PATH);
+    if (!(strlen(userId) || strlen(password) || strlen(service))) {
+        MessageBoxA(
+            NULL,
+            "login.ini中相关信息为空！",
+            "提示",
+            MB_OK
+        );
+        exit(-2);
+    }
+    string body("userId=");
+    body.append(userId);
+    body.append("&password=");
+    body.append(password);
+    body.append("&service=");
+    body.append(service);
+    body.append("&queryString=nasip%253Dfbba2526398e9984bd6f73050578e0e2&operatorPwd=&operatorUserId=&validcode=&passwordEncrypt=false");
+    request.append(body);
+}
 
 int getwifi() {
     HANDLE hClient = NULL;
@@ -351,34 +434,7 @@ void authentication(ofstream* outFile) {
         return;
     }
 
-    // 构造登录请求头
-    const char* sendBuff =
-        "POST /eportal/InterFace.do?method=login HTTP/1.1\r\n"
-        "Host: 172.21.2.10:8080\r\n"
-        "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:107.0) Gecko/20100101 Firefox/107.0\r\n"
-        "Accept: */*\r\n"
-        "Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2\r\n"
-        "Accept-Encoding: gzip, deflate\r\n"
-        "Content-Type: application/x-www-form-urlencoded; charset=UTF-8\r\n"
-        "Content-Length: 197\r\n"
-        "Origin: http://172.21.2.10:8080\r\n"
-        "Connection: close\r\n"
-        "Referer: http://172.21.2.10:8080/eportal/index.jsp?nasip=fbba2526398e9984bd6f73050578e0e2\r\n"
-        "Cookie: EPORTAL_USER_GROUP=2020%E7%BA%A7%E5%AD%A6%E7%94%9F; EPORTAL_COOKIE_DOMAIN=false; EPORTAL_COOKIE_OPERATORPWD=; EPORTAL_COOKIE_USERNAME=; EPORTAL_COOKIE_PASSWORD=; EPORTAL_COOKIE_SERVER=; EPORTAL_COOKIE_SERVER_NAME=; EPORTAL_AUTO_LAND=; JSESSIONID=\r\n"
-        "\r\n"
-        "userId=******************&password=******&service=***************************&queryString=nasip%253Dfbba2526398e9984bd6f73050578e0e2&operatorPwd=&operatorUserId=&validcode=&passwordEncrypt=false";
-
-    /*
-    userId为用户名
-    password为密码
-    server:
-        校园网：%25E6%25A0%25A1%25E5%259B%25AD%25E7%25BD%2591
-        移动：%25E7%25A7%25BB%25E5%258A%25A8
-        电信：%25E7%2594%25B5%25E4%25BF%25A1
-        联通：%25E8%2581%2594%25E9%2580%259A
-    */
-
-    ret = send(clientSocket, sendBuff, strlen(sendBuff), 0);
+    ret = send(clientSocket, request.c_str(), request.length(), 0);
     if (ret == SOCKET_ERROR) {
         *outFile << "The request failed to send\r\n";
         closesocket(clientSocket);
@@ -394,9 +450,11 @@ void authentication(ofstream* outFile) {
 }
 
 int main() {
+    // 创建全局句柄，防止脚本后台多开
+    /*HANDLE singleEvent = CreateMutex(NULL, FALSE, L"Global\\AutoNet");
+    if (!singleEvent || ::GetLastError() == ERROR_ALREADY_EXISTS)  return 1;*/
 
-    HANDLE singleEvent = CreateMutex(NULL, FALSE, L"Global\\AutoNet");
-    if (!singleEvent || ::GetLastError() == ERROR_ALREADY_EXISTS)  return 1;
+    initRequest();
 
     while (true) {
         if (!pingOnlyOnce("39.156.66.10"))
