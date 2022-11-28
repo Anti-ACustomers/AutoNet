@@ -23,7 +23,7 @@
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "wlanapi.lib")
 #pragma comment(lib, "ole32.lib")
-//#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )
+#pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )
 
 using namespace std;
 
@@ -451,8 +451,8 @@ void authentication(ofstream* outFile) {
 
 int main() {
     // 创建全局句柄，防止脚本后台多开
-    /*HANDLE singleEvent = CreateMutex(NULL, FALSE, L"Global\\AutoNet");
-    if (!singleEvent || ::GetLastError() == ERROR_ALREADY_EXISTS)  return 1;*/
+    HANDLE singleEvent = CreateMutex(NULL, FALSE, L"Global\\AutoNet");
+    if (!singleEvent || ::GetLastError() == ERROR_ALREADY_EXISTS)  return 1;
 
     initRequest();
 
